@@ -4,6 +4,13 @@ metadata:
   name: my-cluster
 spec:
   kafka:
+    resources:
+      requests:
+        cpu: 2
+        memory: 4Gi
+      limits:
+        cpu: 8
+        memory: 32Gi
     version: 2.4.0
     replicas: 1
     listeners:

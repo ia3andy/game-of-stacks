@@ -7,6 +7,7 @@ metadata:
     app: villains
     version: base
   name: villains-base
+  namespace: gos-villains
 spec:
   replicas: 0
   selector:
@@ -29,6 +30,13 @@ spec:
         - image:
           imagePullPolicy: Never
           name: villains
+          resources:
+            requests:
+              memory: "16Gi"
+              cpu: "10000m"
+            limits:
+              memory: "32Gi"
+              cpu: "20000m"
           ports:
             - containerPort: 8081
               name: http
@@ -45,11 +53,11 @@ spec:
             - name: KAFKA_ADDRESS
               value: my-cluster-kafka-bootstrap.kafka:9092
             - name: WAVES_SIZE
-              value: "10"
+              value: "50"
             - name: WAVES_DELAY
-              value: "10"
+              value: "5"
             - name: WAVES_COUNT
-              value: "2"
+              value: "3"
             - name: SPEED
               value: "70"
           securityContext:
@@ -59,6 +67,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: villains
+  namespace: gos-villains
   labels:
     project: gos
     type: game-object
