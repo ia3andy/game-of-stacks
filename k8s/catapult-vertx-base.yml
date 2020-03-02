@@ -8,6 +8,7 @@ metadata:
     runtime: vertx
     version: base
   name: catapult-vertx
+  namespace: gos-catapults
 spec:
   replicas: 0
   selector:
@@ -53,6 +54,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: catapult
+  namespace: gos-catapults
   labels:
     project: gos
     type: game-object

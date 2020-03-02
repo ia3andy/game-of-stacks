@@ -7,6 +7,7 @@ metadata:
     app: hero
     version: base
   name: hero
+  namespace: gos-heroes
 spec:
   replicas: 0
   selector:
@@ -36,7 +37,7 @@ spec:
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: my-cluster-kafka-bootstrap.kafka:9092
         - name: ARROW_API_MP_REST_URL
-          value: http://arrow:8080
+          value: http://arrow.gos-arrows:8080
         - name: USE_BOW
           value: "true"
         - name: RUNTIME
@@ -54,6 +55,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hero
+  namespace: gos-heroes
   labels:
     project: gos
     type: game-object

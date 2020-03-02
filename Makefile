@@ -2,6 +2,7 @@ VERSION := 0.0.1
 STRIMZI_VERSION := 0.16.0
 ISTIO_VERSION := 1.4.5
 # List of all services (for image building / deploying)
+NAMESPACES ?= gos-heroes gos-villains gos-arrows gos-catapults gos-web
 SERVICES ?= web-j11hotspot villains-j11oj9 catapult-vertx-j11hotspot arrow-j11hotspot hero-native hero-j11hotspot
 # Kube's CLI (kubectl or oc)
 K8S_BIN ?= $(shell which kubectl 2>/dev/null || which oc 2>/dev/null)
@@ -68,7 +69,7 @@ podman:
 	done
 
 deploy-kafka:
-	${K8S_BIN} create namespace kafka
+	${K8S_BIN} create namespace kafka || true ;
 	curl -L https://github.com/strimzi/strimzi-kafka-operator/releases/download/${STRIMZI_VERSION}/strimzi-cluster-operator-${STRIMZI_VERSION}.yaml | sed 's/namespace: .*/namespace: kafka/'   | ${K8S_BIN} apply -f - -n kafka
 	${K8S_BIN} apply -f ./k8s/strimzi-kafka-${STRIMZI_VERSION}.yml -n kafka
 
@@ -90,45 +91,48 @@ expose-kiali:
 	./istioctl dashboard kiali
 
 deploy: .ensure-yq
+	for nms in ${NAMESPACES} ; do \
+  		oc create namespace $$nms || true; \
+  	done ;
 	./genall.sh -pp ${PULL_POLICY} -d "${OCI_DOMAIN_IN_CLUSTER}" -t ${OCI_TAG} | ${K8S_BIN} apply -f - ;
 ifeq ($(K8S_BIN),oc)
 	${K8S_BIN} apply -f ./k8s/web-route.yml
 endif
 
 reset:
-	${K8S_BIN} scale deployment hero-native --replicas=0; \
-	${K8S_BIN} scale deployment hero-j11hotspot --replicas=0; \
-	${K8S_BIN} scale deployment arrow-j11hotspot --replicas=0; \
-	${K8S_BIN} scale deployment villains-j11oj9 --replicas=0;
+	${K8S_BIN} scale deployments --all -n gos-heroes --replicas=0;
+	${K8S_BIN} scale deployments --all -n gos-arrows --replicas=0;
+	${K8S_BIN} scale deployments --all -n gos-villains --replicas=0;
+	${K8S_BIN} scale deployments --all -n gos-catapults --replicas=0;
 
-arrow-scaling-hero-native-vs-hotspot--native: reset
-	${K8S_BIN} scale deployment hero-native --replicas=5; \
-	${K8S_BIN} scale deployment arrow-j11hotspot --replicas=1; \
-	${K8S_BIN} scale deployment villains-j11oj9 --replicas=1;
+simu-arrow-scaling-hero-native-vs-hotspot--native: reset
+	${K8S_BIN} scale deployment hero-native -n gos-heroes --replicas=5; \
+	${K8S_BIN} scale deployment arrow-j11hotspot -n gos-arrows --replicas=1; \
+	${K8S_BIN} scale deployment villains-j11oj9 -n gos-villains --replicas=1;
 
-arrow-scaling-hero-native-vs-hotspot--hotspot: reset
-	${K8S_BIN} scale deployment hero-j11hotspot --replicas=5; \
-	${K8S_BIN} scale deployment arrow-j11hotspot --replicas=1; \
-	${K8S_BIN} scale deployment villains-j11oj9 --replicas=1;
+simu-arrow-scaling-hero-native-vs-hotspot--hotspot: reset
+	${K8S_BIN} scale deployment hero-j11hotspot -n gos-heroes --replicas=5; \
+	${K8S_BIN} scale deployment arrow-j11hotspot -n gos-arrows --replicas=1; \
+	${K8S_BIN} scale deployment villains-j11oj9 -n gos-villains --replicas=1;
 
-start-mixed:
+simu-start-mixed:
 	${K8S_BIN} delete pods -l type=game-object
-	${K8S_BIN} scale deployment hero-native --replicas=2; \
-	${K8S_BIN} scale deployment hero-j11hotspot --replicas=2; \
-	${K8S_BIN} scale deployment arrow-j11hotspot --replicas=1; \
-	${K8S_BIN} scale deployment villains-j11oj9 --replicas=1;
+	${K8S_BIN} scale deployment hero-native -n gos-heroes --replicas=2; \
+	${K8S_BIN} scale deployment hero-j11hotspot -n gos-heroes  --replicas=2; \
+	${K8S_BIN} scale deployment arrow-j11hotspot -n gos-arrows --replicas=1; \
+	${K8S_BIN} scale deployment villains-j11oj9 -n gos-villains --replicas=1;
 
 more-villains:
 	./gentpl.sh villains-j11oj9 -pp ${PULL_POLICY} -d "${OCI_DOMAIN_IN_CLUSTER}" -t ${OCI_TAG} \
     	| yq w --tag '!!str' - "spec.template.spec.containers[0].env.(name==WAVES_SIZE).value" 10 \
     	| yq w --tag '!!str' - "spec.template.spec.containers[0].env.(name==WAVES_COUNT).value" 4 \
-		| ${K8S_BIN} apply -f -
+		| ${K8S_BIN} apply -n gos-villains -f -
 
 much-more-villains:
 	./gentpl.sh villains-j11oj9 -pp ${PULL_POLICY} -d "${OCI_DOMAIN_IN_CLUSTER}" -t ${OCI_TAG} \
     	| yq w --tag '!!str' - "spec.template.spec.containers[0].env.(name==WAVES_SIZE).value" 30 \
     	| yq w --tag '!!str' - "spec.template.spec.containers[0].env.(name==WAVES_COUNT).value" 4 \
-		| ${K8S_BIN} apply -f -
+		| ${K8S_BIN} apply -n gos-villains -f -
 
 scale-service:
 	${K8S_BIN} scale deployment $$svc --replicas=$(count)
@@ -137,11 +141,10 @@ expose:
 	@echo "URL: http://localhost:8081/"
 	${K8S_BIN} port-forward svc/web 8081:8081
 
-undeploy-go:
-	${K8S_BIN} delete all -l project=gos -l type=game-object
-
 undeploy:
-	${K8S_BIN} delete all -l project=gos
+	for nms in ${NAMESPACES} ; do \
+		oc delete namespace $$nms || true; \
+	done ;
 
 restart-pods-go:
 	${K8S_BIN} delete pods -l project=gos -l type=game-object

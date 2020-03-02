@@ -2,7 +2,7 @@ kind: Route
 apiVersion: route.openshift.io/v1
 metadata:
   name: web
-  namespace: gos
+  namespace: gos-web
   labels:
     app: web
     project: gos
