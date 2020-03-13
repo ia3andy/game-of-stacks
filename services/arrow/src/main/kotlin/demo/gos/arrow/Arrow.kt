@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
+import org.eclipse.microprofile.reactive.messaging.OnOverflow
 import java.security.SecureRandom
 import java.util.*
 import java.util.logging.Logger
@@ -29,10 +30,12 @@ class Arrow {
 
     @Inject
     @Channel("display")
+    @OnOverflow(OnOverflow.Strategy.DROP)
     lateinit var displayEmitter: Emitter<JsonArray>
 
     @Inject
     @Channel("kill-single")
+    @OnOverflow(OnOverflow.Strategy.DROP)
     lateinit var killSingleEmitter: Emitter<JsonObject>
 
     @Path("/fire")

@@ -101,10 +101,12 @@ class Hero {
 
     @Inject
     @Channel("weapon-making-noise")
+    @OnOverflow(OnOverflow.Strategy.BUFFER)
     lateinit var weaponMakingNoiseFlowable: Flowable<JsonObject>
 
     @Inject
     @Channel("villain-making-noise")
+    @OnOverflow(OnOverflow.Strategy.BUFFER)
     lateinit var villainMakingNoiseFlowable: Flowable<JsonObject>
 
     fun onStart(@Observes e: StartupEvent) {
